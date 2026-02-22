@@ -1167,4 +1167,5 @@ bool ghostty_benchmark_cli(const char*, const char*);
 }
 #endif
 
+#include "ghostty/pixel.h"
 #endif /* GHOSTTY_H */
