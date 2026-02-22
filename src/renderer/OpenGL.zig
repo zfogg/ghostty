@@ -459,3 +459,81 @@ pub inline fn beginFrame(
     _ = self;
     return try Frame.begin(.{}, renderer, target);
 }
+
+/// C-compatible pixel data structure for pixel extraction
+pub const CPixelData = extern struct {
+    pixels: ?[*]u8,
+    width: u32,
+    height: u32,
+    pitch: u32,
+};
+
+/// Extract rendered pixels from the framebuffer as BGRA data
+/// This must be called within the GL context and after a frame is rendered
+/// Uses malloc for allocation so the result can be freed by C code
+pub export fn opengl_get_pixels() CPixelData {
+    // Get viewport dimensions
+    var viewport: [4]gl.c.GLint = undefined;
+    gl.glad.context.GetIntegerv.?(gl.c.GL_VIEWPORT, &viewport);
+
+    const width = @as(u32, @intCast(viewport[2]));
+    const height = @as(u32, @intCast(viewport[3]));
+
+    if (width == 0 or height == 0) {
+        return .{
+            .pixels = null,
+            .width = 0,
+            .height = 0,
+            .pitch = 0,
+        };
+    }
+
+    // Calculate pitch with 4-byte alignment
+    const pitch = ((width * 4 + 3) / 4) * 4;
+
+    // Allocate buffer for BGRA pixel data using malloc for C compatibility
+    const buffer_size = pitch * height;
+    const pixels_ptr = std.c.malloc(buffer_size) orelse {
+        return .{
+            .pixels = null,
+            .width = 0,
+            .height = 0,
+            .pitch = 0,
+        };
+    };
+
+    const pixels_slice = @as([*]u8, @ptrCast(pixels_ptr))[0..buffer_size];
+
+    // Read pixels from the currently bound framebuffer
+    // GL_BGRA format matches GPU output directly (faster than RGB conversion)
+    // GL_UNSIGNED_BYTE for 8-bit per channel
+    gl.glad.context.ReadPixels.?(
+        0,
+        0,
+        @intCast(width),
+        @intCast(height),
+        gl.c.GL_BGRA,
+        gl.c.GL_UNSIGNED_BYTE,
+        pixels_slice.ptr,
+    );
+
+    // Check for GL errors
+    const err = gl.glad.context.GetError.?();
+    if (err != gl.c.GL_NO_ERROR) {
+        log.err("glReadPixels failed with GL error: 0x{x}", .{err});
+        std.c.free(pixels_ptr);
+        return .{
+            .pixels = null,
+            .width = 0,
+            .height = 0,
+            .pitch = 0,
+        };
+    }
+
+    return .{
+        .pixels = @ptrCast(pixels_ptr),
+        .width = width,
+        .height = height,
+        .pitch = pitch,
+    };
+}

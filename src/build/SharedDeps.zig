@@ -583,6 +583,11 @@ fn addGtkNg(
 
     step.linkSystemLibrary2("gtk4", dynamic_link_opts);
     step.linkSystemLibrary2("libadwaita-1", dynamic_link_opts);
+    step.linkSystemLibrary2("graphene-gobject-1.0", dynamic_link_opts);
+    step.linkSystemLibrary2("cairo-gobject", dynamic_link_opts);
+    step.linkSystemLibrary2("cairo", dynamic_link_opts);
+    step.linkSystemLibrary2("pango", dynamic_link_opts);
+    step.linkSystemLibrary2("harfbuzz", dynamic_link_opts);
 
     if (self.config.x11) {
         step.linkSystemLibrary2("X11", dynamic_link_opts);
@@ -802,6 +807,26 @@ pub fn gtkNgDistResources(
         blueprint_exe.linkLibC();
         blueprint_exe.linkSystemLibrary2("gtk4", dynamic_link_opts);
         blueprint_exe.linkSystemLibrary2("libadwaita-1", dynamic_link_opts);
+
+        // Add system include paths for C imports to find GTK4 and libadwaita headers
+        // These are all the transitive dependencies needed for GTK4/libadwaita headers
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/libadwaita-1" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/gtk-4.0" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/glib-2.0" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/lib/glib-2.0/include" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/gdk-pixbuf-2.0" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/cairo" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/pango-1.0" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/graphene-1.0" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/lib/graphene-1.0/include" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/libpng16" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/pixman-1" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/fribidi" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/blkid" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/libmount" });
+        blueprint_exe.addSystemIncludePath(.{ .cwd_relative = "/usr/include/sysprof-6" });
 
         for (gresource.blueprints) |bp| {
             const blueprint_run = b.addRunArtifact(blueprint_exe);
